@@ -12,6 +12,7 @@ class ArchiveCreatorTest extends TestCase
     private $listmessage;
     private $lists;
     private $daoStub;
+    private $translatorStub;
 
     protected function setUp(): void
     {
@@ -65,6 +66,19 @@ class ArchiveCreatorTest extends TestCase
             1 => ['name' => 'list 1', 'active' => 1],
             2 => ['name' => 'list 2', 'active' => 0],
         ];
+
+        $this->translatorStub = $this->getMockBuilder('phpList\plugin\Common\FrontendTranslator')
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $this->translatorStub->method('s')
+            ->willreturnCallback(
+                function ($key, ...$args) {
+                    return count($args) > 0
+                         ? sprintf($key, ...$args)
+                         : $key;
+                }
+            );
 
         $this->daoStub = $this->getMockBuilder('phpList\plugin\ViewBrowserPlugin\DAO')
             ->disableOriginalConstructor()
@@ -135,7 +149,7 @@ class ArchiveCreatorTest extends TestCase
     #[DataProvider('createsArchiveDataProvider')]
     public function testCreatesArchive($uniqid, $expected, $unexpected = array())
     {
-        $archive = new phpList\plugin\ViewBrowserPlugin\ArchiveCreator($this->daoStub);
+        $archive = new phpList\plugin\ViewBrowserPlugin\ArchiveCreator($this->daoStub, $this->translatorStub);
         $result = $archive->createSubscriberArchive($uniqid);
 
         foreach ($expected as $e) {
@@ -178,7 +192,7 @@ class ArchiveCreatorTest extends TestCase
         $phplist_config['viewbrowser_anonymous'] = true;
         $phplist_config['viewbrowser_allowed_lists'] = $allowed;
 
-        $archive = new phpList\plugin\ViewBrowserPlugin\ArchiveCreator($this->daoStub);
+        $archive = new phpList\plugin\ViewBrowserPlugin\ArchiveCreator($this->daoStub, $this->translatorStub);
         $result = $archive->createListArchive($listId);
 
         $this->assertStringContainsString($expected, $result);

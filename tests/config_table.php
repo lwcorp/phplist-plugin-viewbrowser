@@ -16,6 +16,9 @@ $phplist_config = [
     'viewbrowser_allowed_lists' => '',
     'viewbrowser_archive_link' => 'archive',
     'viewbrowser_archive_styles' => '',
+    'viewbrowser_archive_items_per_page' => 5,
+    'viewbrowser_archive_custom_css_url' => '',
+    'viewbrowser_target' => false,
     'html_email_style' => '<style></style>',
     'subscribeurl' => '',
     'unsubscribeurl' => 'http://mysite.com/lists/?p=unsubscribe',
@@ -23,7 +26,5 @@ $phplist_config = [
     'forwardurl' => 'http://mysite.com/lists/?p=forward',
     'confirmationurl' => '',
     'blacklisturl' => '',
-    'viewbrowser_archive_items_per_page' => 5,
-    'viewbrowser_archive_custom_css_url' => '',
     'vcardurl' => 'http://mysite.com/lists/?p=vcard',
 ];

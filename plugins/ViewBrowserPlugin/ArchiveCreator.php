@@ -37,6 +37,8 @@ class ArchiveCreator
 {
     /** @var phpList\plugin\ViewBrowserPlugin\DAO DAO */
     private $dao;
+    /** @var Common\FrontendTranslator */
+    private $translator;
 
     private function urlPattern()
     {
@@ -93,13 +95,14 @@ class ArchiveCreator
 
         return (string) new View(
             __DIR__ . '/archive.tpl.php',
-            ['items' => $this->archiveItems($uid, $campaigns), 'subject' => $subject, 'paginator' => $paginator, 'css' => $cssUrl]
+            ['items' => $this->archiveItems($uid, $campaigns), 'subject' => $subject, 'paginator' => $paginator, 'css' => $cssUrl, 'translator' => $this->translator]
         );
     }
 
-    public function __construct(DAO $dao)
+    public function __construct(DAO $dao, $translator)
     {
         $this->dao = $dao;
+        $this->translator = $translator;
     }
 
     /**
@@ -112,6 +115,10 @@ class ArchiveCreator
     public function createSubscriberArchive($uid)
     {
         $user = $this->dao->userByUniqid($uid);
+
+        if (!$user) {
+            return $this->translator->s('User with uid %s does not exist', $uid);
+        }
 
         $totalCallback = function () use ($uid) {
             return $this->dao->totalMessagesForUser($uid);
@@ -136,7 +143,7 @@ class ArchiveCreator
         $list = $this->dao->listById($listId);
 
         if (!$list) {
-            return s('List %d does not exist', $listId);
+            return $this->translator->s('List %d does not exist', $listId);
         }
         $allowedLists = getConfig('viewbrowser_allowed_lists');
         $allowed =
@@ -144,7 +151,7 @@ class ArchiveCreator
             || in_array($listId, preg_split('/\s+/', $allowedLists, -1, PREG_SPLIT_NO_EMPTY));
 
         if (!$allowed) {
-            return s('Not allowed to view campaigns for list %d', $listId);
+            return $this->translator->s('Not allowed to view campaigns for list %d', $listId);
         }
 
         $totalCallback = function () use ($listId) {
@@ -168,8 +175,8 @@ class ArchiveCreator
     {
         $user = $this->dao->subscriberForAdmin($adminId);
 
-        if ($user['email'] === null) {
-            return s('Admin email %s is not a subscriber', $user['admin_email']);
+        if ($user === false || $user === null) {
+            return s('No campaigns found');
         }
         $uid = $user['uniqid'];
         $title = s('Campaigns sent to %s', $user['email']);

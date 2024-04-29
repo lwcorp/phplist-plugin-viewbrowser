@@ -38,6 +38,8 @@ class ContentCreator
     private $daoAttr;
     /** @var bool Whether click tracking is enabled */
     private $clickTrack;
+    /** @var Common\FrontendTranslator */
+    private $translator;
 
     /**
      * For an anonymous page determine whether a message has been sent to an allowed list.
@@ -277,10 +279,12 @@ END;
     public function __construct(
         DAO $dao,
         Common\DAO\Attribute $daoAttr,
+        $translator,
         $clickTrack
     ) {
         $this->dao = $dao;
         $this->daoAttr = $daoAttr;
+        $this->translator = $translator;
         $this->clickTrack = $clickTrack;
     }
 
@@ -299,7 +303,7 @@ END;
         $row = $this->dao->messageById($mid);
 
         if (!$row) {
-            return s('Message with id %d does not exist', $mid);
+            return $this->translator->s('Message with id %d does not exist', $mid);
         }
         $personalise = ($uid !== '');
 
@@ -307,19 +311,19 @@ END;
             $user = $this->dao->userByUniqid($uid);
 
             if (!$user) {
-                return s('User with uid %s does not exist', $uid);
+                return $this->translator->s('User with uid %s does not exist', $uid);
             }
             $allow = $this->dao->wasUserSentMessage($mid, $uid)
                 || (getConfig('viewbrowser_anonymous') && $this->sentToAllowedList($mid))
                 || $this->dao->isUserSuperAdmin($uid);
 
             if (!$allow) {
-                return s('Not allowed to view message %d', $mid);
+                return $this->translator->s('Not allowed to view message %d', $mid);
             }
             $attributeValues = $this->dao->getUserAttributeValues($user['email']);
         } else {
             if (!$this->sentToAllowedList($mid)) {
-                return s('Not allowed to view message %d', $mid);
+                return $this->translator->s('Not allowed to view message %d', $mid);
             }
             $user = array('email' => '', 'uniqid' => '');
             $attributeValues = array();
@@ -338,7 +342,7 @@ END;
             $content = $this->dao->fetchUrl($message['sendurl'], $user);
 
             if (!$content) {
-                return s('Unable to retrieve URL %s', $message['sendurl']);
+                return $this->translator->s('Unable to retrieve URL %s', $message['sendurl']);
             }
         } else {
             $templateBody = '';

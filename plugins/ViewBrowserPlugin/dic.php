@@ -34,6 +34,7 @@ return new Picotainer([
         return new ContentCreator(
             $container->get('DAO'),
             $container->get('DAOAttr'),
+            $container->get('FrontendTranslator'),
             CLICKTRACK
         );
     },
@@ -52,7 +53,13 @@ return new Picotainer([
     },
     'ArchiveCreator' => function (ContainerInterface $container) {
         return new ArchiveCreator(
-            $container->get('DAO')
+            $container->get('DAO'),
+            $container->get('FrontendTranslator')
         );
+    },
+    'FrontendTranslator' => function (ContainerInterface $container) {
+        global $pagedata, $plugins;
+
+        return new \phpList\plugin\Common\FrontendTranslator($pagedata, $plugins['ViewBrowserPlugin']->coderoot);
     },
 ]);
