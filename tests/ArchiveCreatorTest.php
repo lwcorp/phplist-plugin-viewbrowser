@@ -1,9 +1,18 @@
 <?php
 
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 class ArchiveCreatorTest extends TestCase
 {
+    private $users;
+    private $usermessage;
+    private $listmessage;
+    private $lists;
+    private $daoStub;
+
     protected function setUp(): void
     {
         $this->users = [
@@ -62,57 +71,45 @@ class ArchiveCreatorTest extends TestCase
             ->getMock();
 
         $this->daoStub->method('userByUniqid')
-            ->will(
-                $this->returnCallback(
-                    function ($uniqid) {
-                        return $this->users[$uniqid];
-                    }
-                )
+            ->willreturnCallback(
+                function ($uniqid) {
+                    return $this->users[$uniqid];
+                }
             );
 
         $this->daoStub->method('messagesForUser')
-            ->will(
-                $this->returnCallback(
-                    function ($uniqid) {
-                        return $this->usermessage[$uniqid];
-                    }
-                )
+            ->willreturnCallback(
+                function ($uniqid) {
+                    return $this->usermessage[$uniqid];
+                }
             );
         $this->daoStub->method('totalMessagesForUser')
-            ->will(
-                $this->returnCallback(
-                    function ($uniqid) {
-                        return count($this->usermessage[$uniqid]);
-                    }
-                )
+            ->willreturnCallback(
+                function ($uniqid) {
+                    return count($this->usermessage[$uniqid]);
+                }
             );
         $this->daoStub->method('messagesForList')
-            ->will(
-                $this->returnCallback(
-                    function ($listId) {
-                        return $this->listmessage[$listId];
-                    }
-                )
+            ->willreturnCallback(
+                function ($listId) {
+                    return $this->listmessage[$listId];
+                }
             );
         $this->daoStub->method('totalMessagesForList')
-            ->will(
-                $this->returnCallback(
-                    function ($listId) {
-                        return count($this->listmessage[$listId]);
-                    }
-                )
+            ->willreturnCallback(
+                function ($listId) {
+                    return count($this->listmessage[$listId]);
+                }
             );
         $this->daoStub->method('listById')
-            ->will(
-                $this->returnCallback(
-                    function ($listId) {
-                        return $this->lists[$listId];
-                    }
-                )
+            ->willreturnCallback(
+                function ($listId) {
+                    return $this->lists[$listId];
+                }
             );
     }
 
-    public function createsArchiveDataProvider()
+    public static function createsArchiveDataProvider()
     {
         $data = [
             'contains all messages' => [
@@ -135,11 +132,8 @@ class ArchiveCreatorTest extends TestCase
         return $data;
     }
 
-    /**
-     * @test
-     * @dataProvider createsArchiveDataProvider
-     */
-    public function createsArchive($uniqid, $expected, $unexpected = array())
+    #[DataProvider('createsArchiveDataProvider')]
+    public function testCreatesArchive($uniqid, $expected, $unexpected = array())
     {
         $archive = new phpList\plugin\ViewBrowserPlugin\ArchiveCreator($this->daoStub);
         $result = $archive->createSubscriberArchive($uniqid);
@@ -153,7 +147,7 @@ class ArchiveCreatorTest extends TestCase
         }
     }
 
-    public function allowAccessDataProvider()
+    public static function allowAccessDataProvider()
     {
         $data = [
             'createsArchivePublicList' => [
@@ -176,11 +170,8 @@ class ArchiveCreatorTest extends TestCase
         return $data;
     }
 
-    /**
-     * @test
-     * @dataProvider allowAccessDataProvider
-     */
-    public function allowAccessToArchive($allowed, $listId, $expected)
+    #[DataProvider('allowAccessDataProvider')]
+    public function testAllowAccessToArchive($allowed, $listId, $expected)
     {
         global $phplist_config;
 
