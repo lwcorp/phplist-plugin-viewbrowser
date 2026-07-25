@@ -1,3 +1,7 @@
+version 2.12.3+20260725
+      Update unit tests for phpunit 13.1
+      Use the viewbrowser_target config setting for links on the archive page Fixes #22
+
 version 2.12.2+20260306
       Always use html document type
       CS Fixer
