@@ -1,3 +1,9 @@
+version 2.13.0+20260728
+      Allow text on the front-end pages to be translated.
+      Separate the front-end texts from the admin pages texts.
+      Add config setting to allow attachments on an anonymous page.
+      Add page to download attachments.
+
 version 2.12.3+20260725
       Update unit tests for phpunit 13.1
       Use the viewbrowser_target config setting for links on the archive page Fixes #22

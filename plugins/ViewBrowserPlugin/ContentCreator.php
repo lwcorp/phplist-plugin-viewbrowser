@@ -102,10 +102,16 @@ class ContentCreator
             $description = htmlspecialchars($a['description']);
             $remotefile = htmlspecialchars($a['remotefile']);
             $size = $this->human_filesize($a['size']);
+            $params = ['p' => \ViewBrowserPlugin::DOWNLOAD_PAGE, 'pi' => 'ViewBrowserPlugin', 'attach' => $a['id']];
+
+            if ($uid) {
+                $params['uid'] = $uid;
+            }
+            $attachUrl = htmlspecialchars(publicUrl($params));
             $html .= <<<END
 <img src="./?p=image&amp;pi=CommonPlugin&amp;image=attach.png" alt="" title="" />
 $description
-<a href="./dl.php?id={$a['id']}&amp;uid=$uid">$remotefile</a>
+<a href="$attachUrl">$remotefile</a>
 $size<br/>
 END;
         }
@@ -380,8 +386,7 @@ END;
         $content = parseLogoPlaceholders($content);
         $content = $this->replaceUserTrack($content, $mid, $uid);
 
-        // phplist restricts download of attachments to subscribers only
-        if ($personalise && count($attachments = $this->dao->attachments($mid)) > 0) {
+        if (($personalise || getConfig('viewbrowser_anonymous_attachments')) && count($attachments = $this->dao->attachments($mid)) > 0) {
             $content = addHTMLFooter($content, $this->addAttachments($uid, $attachments));
         }
         $destinationEmail = $user['email'];

@@ -39,6 +39,14 @@ class ContentCreatorTest extends TestCase
         ];
 
         $this->attachments = [
+            26 => [
+                [
+                    'id' => 12,
+                    'description' => 'an attachment',
+                    'remotefile' => 'attachment.doc',
+                    'size' => 123456,
+                ],
+            ],
             28 => [
                 [
                     'id' => 12,
@@ -311,7 +319,6 @@ Forward a Message to Someone [FORWARD]',
             'http://mysite.com/lists/?p=preferences&uid=2f93856905d26f592c7cfefbff599a0e' => '9d7c0c8c-1dc1-4597-899b-215c3951e756',
             'http://mysite.com/lists/?p=forward&uid=2f93856905d26f592c7cfefbff599a0e&mid=33' => 'b10084da-1d0c-4286-8838-52fb0f9ff620',
             'http://mysite.com/lists/?p=forward&uid=2f93856905d26f592c7cfefbff599a0e&mid=34' => '1636661d-059f-4009-a8b6-e1c36223ac07',
-            'http://mysite.com/lists/?p=vcard' => '',
         ];
 
         $this->daoStub = $this->getMockBuilder('phpList\plugin\ViewBrowserPlugin\DAO')
@@ -345,7 +352,7 @@ Forward a Message to Someone [FORWARD]',
         $this->daoStub->method('forwardUuid')
             ->willreturnCallback(
                 function ($url) {
-                    return $this->forwardUuids[$url];
+                    return $this->forwardUuids[$url] ?? false;
                 }
             );
         $this->daoStub->method('getUserAttributeValues')
@@ -635,19 +642,32 @@ Forward a Message to Someone [FORWARD]',
         $this->assertStringContainsString($expected2, $result);
     }
 
-    public function testAddsAttachment()
+    public function testAddsAttachmentForUser()
     {
         $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, false);
         $result = $cc->createContent(28, '2f93856905d26f592c7cfefbff599a0e');
         $expected =
 '<p>Attachments:<br><img src="./?p=image&amp;pi=CommonPlugin&amp;image=attach.png" alt="" title="">
 an attachment
-<a href="./dl.php?id=12&amp;uid=2f93856905d26f592c7cfefbff599a0e">attachment.doc</a>
+<a href="http://mysite.com/lists/?p=dl&amp;pi=ViewBrowserPlugin&amp;attach=12&amp;uid=2f93856905d26f592c7cfefbff599a0e">attachment.doc</a>
 123.5kB<br><img src="./?p=image&amp;pi=CommonPlugin&amp;image=attach.png" alt="" title="">
 another attachment
-<a href="./dl.php?id=13&amp;uid=2f93856905d26f592c7cfefbff599a0e">attachment2.doc</a>
+<a href="http://mysite.com/lists/?p=dl&amp;pi=ViewBrowserPlugin&amp;attach=13&amp;uid=2f93856905d26f592c7cfefbff599a0e">attachment2.doc</a>
 7.7kB<br></p>';
         $this->assertStringContainsString($expected, $result);
+    }
+
+    public function testAddsAttachmentForAnonymous()
+    {
+        global $phplist_config;
+
+        $phplist_config['viewbrowser_anonymous'] = true;
+        $phplist_config['viewbrowser_anonymous_attachments'] = true;
+        $phplist_config['viewbrowser_target'] = false;
+
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, false);
+        $result = $cc->createContent(26, '');
+        $this->assertStringContainsString('Attachments', $result);
     }
 
     public function testNotAddAttachmentForAnonymous()
@@ -660,7 +680,7 @@ another attachment
         $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, false);
         $result = $cc->createContent(25, '');
         $this->assertStringContainsString('here is the message content', $result);
-        $this->assertStringNotContainsString('dl.php', $result);
+        $this->assertStringNotContainsString('attach', $result);
     }
 
     public static function allowAccessDataProvider()

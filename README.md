@@ -44,6 +44,8 @@ This plugin is free but if you install and find it useful then a donation to sup
 ## Version history ##
 
     version     Description
+    2.13.0+20260728 Allow text on the front-end pages to be translated.
+                    Add config setting to allow attachments on an anonymous page.
     2.12.3+20260725 Use the open in new window/tab config setting for links on the archive page
     2.12.2+20260306 Always use html document type
     2.12.1+20250327 When a campaign has a template use only the content of the <body> element
