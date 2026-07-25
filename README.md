@@ -44,6 +44,8 @@ This plugin is free but if you install and find it useful then a donation to sup
 ## Version history ##
 
     version     Description
+    2.14.0+20260817 Improve display of RTL file names
+                    Improve front-end page translations
     2.13.0+20260728 Allow text on the front-end pages to be translated.
                     Add config setting to allow attachments on an anonymous page.
     2.12.3+20260725 Use the open in new window/tab config setting for links on the archive page

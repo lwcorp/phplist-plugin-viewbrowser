@@ -1,3 +1,11 @@
+version 2.14.0+20260817
+      Improve display of RTL file names
+      Do not open anchor links in a new window
+      use IntlDateFormatter to format the campaign sent date on the Archive page
+      Revise tests
+      Allow Attachments heading to be translated
+      Add meta viewport element if it does not already exist
+
 version 2.13.0+20260728
       Allow text on the front-end pages to be translated.
       Separate the front-end texts from the admin pages texts.

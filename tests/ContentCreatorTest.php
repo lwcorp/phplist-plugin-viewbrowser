@@ -72,7 +72,8 @@ class ContentCreatorTest extends TestCase
 
         $this->templates = [
             0 => ['template' => ''],
-            1 => ['template' => '<html><head></head><body>template body[CONTENT]</body></html>']
+            1 => ['template' => '<html><head><title>existing title</title></head><body>template body[CONTENT]</body></html>'],
+            2 => ['template' => '<html><head><meta name="viewport" content="width=device-width" /></head><body>template body[CONTENT]</body></html>'],
         ];
 
         $this->templateImages = [
@@ -110,7 +111,7 @@ END
 </div>'
                 ,
                 'id' => 26,
-                'template' => 0,
+                'template' => 2,
                 'subject' => 'a test message',
                 'footer' => '',
                 'fromemail' => 'from@email.com',
@@ -426,10 +427,10 @@ Forward a Message to Someone [FORWARD]',
     public static function createsEmailContentDataProvider()
     {
         $data = [
-            'title element contains message subject' => [
+            'head element added containing meta and title elements' => [
                 25,
                 '2f93856905d26f592c7cfefbff599a0e',
-                ['<title>a test message</title>']
+                ['<head>', 'meta name="viewport"', '<title>a test message</title>']
             ],
             'replaces email placeholder' => [
                 25,
@@ -461,6 +462,11 @@ Forward a Message to Someone [FORWARD]',
                 '',
                 ['email address is  name is default name uniqid is  userid is  more']
             ],
+            'adds title element, does not add meta element to existing head element' => [
+                26,
+                '2f93856905d26f592c7cfefbff599a0e',
+                ['<head>', 'meta name="viewport" content="width=device-width"', '<title>a test message</title>'],
+            ],
             'does not convert a link whose text contains http' => [
                 26,
                 '2f93856905d26f592c7cfefbff599a0e',
@@ -480,6 +486,12 @@ Forward a Message to Someone [FORWARD]',
                 27,
                 '2f93856905d26f592c7cfefbff599a0e',
                 ['<a href="http://www.phplist.com">', 'template body'],
+            ],
+            'adds meta element, does not add title to head element' => [
+                27,
+                '2f93856905d26f592c7cfefbff599a0e',
+                ['<meta name="viewport" content="width=device-width, initial-scale=1"', '<title>a test message</title>'],
+                ['<title>existing title</title>'],
             ],
             'replaces viewbrowser placeholder' => [
                 29,
