@@ -128,6 +128,10 @@ class ContentDocument
     public function addTargetAttribute()
     {
         foreach ($this->dom->getElementsByTagName('a') as $element) {
+            if (substr($element->getAttribute('href'), 0, 1) == '#') {
+                continue;
+            }
+
             if ($element->getAttribute('target') == '') {
                 $element->setAttribute('target', '_blank');
             }
