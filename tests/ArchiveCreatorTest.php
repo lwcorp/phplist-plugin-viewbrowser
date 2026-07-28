@@ -71,6 +71,13 @@ class ArchiveCreatorTest extends TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
+        $this->translatorStub->method('convertFormat')
+            ->willreturnCallback(
+                function ($format) {
+                    return $format;
+                }
+            );
+
         $this->translatorStub->method('s')
             ->willreturnCallback(
                 function ($key, ...$args) {

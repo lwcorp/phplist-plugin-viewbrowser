@@ -73,7 +73,7 @@ class ArchiveCreator
                 'subject' => $c['subject'],
                 'url' => $url,
                 'link' => $link,
-                'entered' => formatDate($c['entered']),
+                'entered' => $c['entered'],
             ];
         }
     }
@@ -93,9 +93,34 @@ class ArchiveCreator
         $customCssUrl = getConfig('viewbrowser_archive_custom_css_url');
         $cssUrl = $customCssUrl ?: \ViewBrowserPlugin::CSS_URL;
 
+        $enteredDateFormatter = function ($archiveItems) {
+            $useIntl = extension_loaded('intl');
+            $intlFormat = $this->translator->convertFormat(getConfig('date_format'));
+
+            foreach ($archiveItems as $item) {
+                if ($useIntl) {
+                    $item['entered'] = \IntlDateFormatter::formatObject(
+                        new \DateTime($item['entered']),
+                        $intlFormat,
+                        $this->translator->languageCode()
+                    );
+                } else {
+                    $item['entered'] = formatDate($item['entered']);
+                }
+
+                yield $item;
+            }
+        };
+
         return (string) new View(
             __DIR__ . '/archive.tpl.php',
-            ['items' => $this->archiveItems($uid, $campaigns), 'subject' => $subject, 'paginator' => $paginator, 'css' => $cssUrl, 'translator' => $this->translator]
+            [
+                'items' => $enteredDateFormatter($this->archiveItems($uid, $campaigns)),
+                'subject' => $subject,
+                'paginator' => $paginator,
+                'css' => $cssUrl,
+                'translator' => $this->translator
+            ]
         );
     }
 
@@ -185,7 +210,15 @@ class ArchiveCreator
             $w->title = $title;
             $w->elementHeading = s('ID');
 
-            foreach ($this->archiveItems($uid, $campaigns) as $row) {
+            $enteredDateFormatter = function ($archiveItems) {
+                foreach ($archiveItems as $item) {
+                    $item['entered'] = formatDate($item['entered']);
+
+                    yield $item;
+                }
+            };
+
+            foreach ($enteredDateFormatter($this->archiveItems($uid, $campaigns)) as $row) {
                 $key = $row['id'];
                 $w->addElement($key);
                 $w->addColumn($key, s('Sent'), $row['entered']);
