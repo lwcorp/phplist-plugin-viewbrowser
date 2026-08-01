@@ -9,6 +9,7 @@ $phplist_config = [
     'version' => '3.3.4',
     'website' => 'mysite.com',
     'domain' => 'mysite.com',
+    'date_format' => 'j M Y',
     'viewbrowser_link' => 'View in your browser',
     'viewbrowser_attributes' => '',
     'viewbrowser_plugins' => "ContentAreas\nconditionalPlaceholderPlugin\nRssFeedPlugin\nViewBrowserPlugin",

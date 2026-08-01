@@ -19,10 +19,17 @@ class ContentCreatorTest extends TestCase
     private $forwardUuids;
     private $daoStub;
     private $daoAttrStub;
-    private $translatorStub;
+    private $translator;
 
     protected function setUp(): void
     {
+        global $plugins;
+
+        $this->translator = new \phpList\plugin\Common\FrontendTranslator(
+            ['language_file' => 'english.inc'],
+            $plugins['ViewBrowserPlugin']->coderoot
+        );
+
         $this->users = [
             '2f93856905d26f592c7cfefbff599a0e' => [
                 'id' => 51,
@@ -414,19 +421,6 @@ Forward a Message to Someone [FORWARD]',
                 ['name' => 'name'],
                 ['name' => 'city']
             ]);
-
-        $this->translatorStub = $this->getMockBuilder('phpList\plugin\Common\FrontendTranslator')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->translatorStub->method('s')
-            ->willreturnCallback(
-                function ($key, ...$args) {
-                    return count($args) > 0
-                         ? sprintf($key, ...$args)
-                         : $key;
-                }
-            );
     }
 
     public static function createsEmailContentDataProvider()
@@ -528,7 +522,7 @@ Forward a Message to Someone [FORWARD]',
         $phplist_config['viewbrowser_anonymous'] = false;
         $phplist_config['viewbrowser_allowed_lists'] = '';
         $phplist_config['viewbrowser_target'] = false;
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, true);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, true);
         $result = $cc->createContent($messageId, $uniqid);
 
         foreach ($expected as $e) {
@@ -563,7 +557,7 @@ Forward a Message to Someone [FORWARD]',
     #[DataProvider('replacesContactPlaceholdersDataProvider')]
     public function testReplacesContactPlaceholders($messageId, $uniqid, $expected, $unexpected = array())
     {
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, false);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent($messageId, $uniqid);
 
         foreach ($expected as $e) {
@@ -592,7 +586,7 @@ Forward a Message to Someone [FORWARD]',
     #[DataProvider('encodesLinksCurrentDataProvider')]
     public function testEncodesLinksCurrent($messageId, $uniqid, $expected, $unexpected = array())
     {
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, true);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, true);
         $result = $cc->createContent($messageId, $uniqid);
 
         foreach ($expected as $e) {
@@ -620,7 +614,7 @@ Forward a Message to Someone [FORWARD]',
     #[DataProvider('doesNotEncodeLinksDataProvider')]
     public function testDoesNotEncodeLinks($messageId, $uniqid, $expected, $unexpected = array())
     {
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, false);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent($messageId, $uniqid);
 
         foreach ($expected as $e) {
@@ -634,7 +628,7 @@ Forward a Message to Someone [FORWARD]',
 
     public function testCreatesHtmlFormatFooter()
     {
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, false);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent(34, '2f93856905d26f592c7cfefbff599a0e');
         $expected = '<div class="footer" style="text-align:left; font-size: 75%;">';
         $this->assertStringContainsString($expected, $result);
@@ -644,17 +638,21 @@ Forward a Message to Someone [FORWARD]',
 
     public function testAddsAttachmentForUser()
     {
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, false);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent(28, '2f93856905d26f592c7cfefbff599a0e');
-        $expected =
-'<p>Attachments:<br><img src="./?p=image&amp;pi=CommonPlugin&amp;image=attach.png" alt="" title="">
-an attachment
-<a href="http://mysite.com/lists/?p=dl&amp;pi=ViewBrowserPlugin&amp;attach=12&amp;uid=2f93856905d26f592c7cfefbff599a0e">attachment.doc</a>
-123.5kB<br><img src="./?p=image&amp;pi=CommonPlugin&amp;image=attach.png" alt="" title="">
-another attachment
-<a href="http://mysite.com/lists/?p=dl&amp;pi=ViewBrowserPlugin&amp;attach=13&amp;uid=2f93856905d26f592c7cfefbff599a0e">attachment2.doc</a>
-7.7kB<br></p>';
-        $this->assertStringContainsString($expected, $result);
+        $expected1 =
+'<p>Attachments:<br>';
+        $expected2 =
+'<img src="./?p=image&amp;pi=CommonPlugin&amp;image=attach.png" alt="" title="">';
+        $expected3 =
+'<bdi>an attachment</bdi>';
+        $expected4 =
+'<a href="http://mysite.com/lists/?p=dl&amp;pi=ViewBrowserPlugin&amp;attach=12&amp;uid=2f93856905d26f592c7cfefbff599a0e"><bdi>attachment</bdi>.doc</a>
+123.5kB<br>';
+        $this->assertStringContainsString($expected1, $result);
+        $this->assertStringContainsString($expected2, $result);
+        $this->assertStringContainsString($expected3, $result);
+        $this->assertStringContainsString($expected4, $result);
     }
 
     public function testAddsAttachmentForAnonymous()
@@ -665,7 +663,7 @@ another attachment
         $phplist_config['viewbrowser_anonymous_attachments'] = true;
         $phplist_config['viewbrowser_target'] = false;
 
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, false);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent(26, '');
         $this->assertStringContainsString('Attachments', $result);
     }
@@ -677,7 +675,7 @@ another attachment
         $phplist_config['viewbrowser_anonymous'] = true;
         $phplist_config['viewbrowser_target'] = false;
 
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, false);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent(25, '');
         $this->assertStringContainsString('here is the message content', $result);
         $this->assertStringNotContainsString('attach', $result);
@@ -762,7 +760,7 @@ another attachment
         $phplist_config['viewbrowser_anonymous'] = $anonymous;
         $phplist_config['viewbrowser_allowed_lists'] = $allowed;
 
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, false);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent($mid, $uid);
         $this->assertStringContainsString($expected, $result);
     }
@@ -773,7 +771,7 @@ another attachment
 
         $phplist_config['viewbrowser_target'] = true;
 
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, true);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, true);
         $result = $cc->createContent(26, '2f93856905d26f592c7cfefbff599a0e');
         $this->assertStringContainsString('target="_blank"', $result);
 
@@ -785,7 +783,7 @@ another attachment
 
         $phplist_config['viewbrowser_target'] = false;
 
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translatorStub, true);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, true);
         $result = $cc->createContent(26, '2f93856905d26f592c7cfefbff599a0e');
         $this->assertStringNotContainsString('target="_blank"', $result);
 
