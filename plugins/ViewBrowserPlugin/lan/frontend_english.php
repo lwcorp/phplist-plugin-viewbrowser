@@ -5,6 +5,7 @@ return [
     'A numeric template image id must be specified' => 'A numeric template image id must be specified',
     'A user uid must be specified' => 'A user uid must be specified',
     'A user uid or a list id must be specified' => 'A user uid or a list id must be specified',
+    'Attachments' => 'Attachments',
     'Campaign archive' => 'Campaign archive',
     'Campaigns sent to %s' => 'Campaigns sent to %s',
     'CommonPlugin must be installed' => 'CommonPlugin must be installed',

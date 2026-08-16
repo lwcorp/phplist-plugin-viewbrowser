@@ -96,7 +96,7 @@ class ContentCreator
      */
     private function addAttachments($uid, Iterator $attachments)
     {
-        $html = '<p>Attachments:<br/>';
+        $html = sprintf('<p>%s:<br/>', $this->translator->s('Attachments'));
 
         foreach ($attachments as $a) {
             $description = htmlspecialchars($a['description']);

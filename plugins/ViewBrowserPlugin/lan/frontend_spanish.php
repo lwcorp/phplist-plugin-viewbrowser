@@ -5,6 +5,7 @@ return [
     'A numeric template image id must be specified' => 'Se debe indicar un valor numérico de ID de plantilla',
     'A user uid must be specified' => 'Se debe indicar un uid de usuario',
     'A user uid or a list id must be specified' => 'A user uid or a list id must be specified',
+    'Attachments' => 'Attachments',
     'Campaign archive' => 'Archivo de campañas',
     'Campaigns sent to %s' => 'Campañas enviadas a %s',
     'CommonPlugin must be installed' => 'Plugin CommonPlugin debe ser installed',

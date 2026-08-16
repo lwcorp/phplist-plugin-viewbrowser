@@ -5,6 +5,7 @@ return [
     'A numeric template image id must be specified' => 'Er moet een nummeriek template id worden opgegeven.',
     'A user uid must be specified' => 'Er moet een gebruikers-uid worden opgegeven.',
     'A user uid or a list id must be specified' => 'A user uid or a list id must be specified',
+    'Attachments' => 'Attachments',
     'Campaign archive' => 'Nieuwsbrievenarchief',
     'Campaigns sent to %s' => 'Campaigns sent to %s',
     'CommonPlugin must be installed' => 'CommonPlugin moet geïnstalleerd zijn.',
