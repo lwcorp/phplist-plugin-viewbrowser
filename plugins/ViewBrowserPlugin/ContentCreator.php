@@ -100,7 +100,13 @@ class ContentCreator
 
         foreach ($attachments as $a) {
             $description = htmlspecialchars($a['description']);
-            $remotefile = htmlspecialchars($a['remotefile']);
+            $remoteFileInfo = pathinfo($a['remotefile']);
+            $remoteFileName = isset($remoteFileInfo['filename'])
+                ? htmlspecialchars($remoteFileInfo['filename'])
+                : '';
+            $remoteFileExt = isset($remoteFileInfo['extension'])
+                ? '.' . $remoteFileInfo['extension']
+                : '';
             $size = $this->human_filesize($a['size']);
             $params = ['p' => \ViewBrowserPlugin::DOWNLOAD_PAGE, 'pi' => 'ViewBrowserPlugin', 'attach' => $a['id']];
 
@@ -110,8 +116,13 @@ class ContentCreator
             $attachUrl = htmlspecialchars(publicUrl($params));
             $html .= <<<END
 <img src="./?p=image&amp;pi=CommonPlugin&amp;image=attach.png" alt="" title="" />
-$description
-<a href="$attachUrl">$remotefile</a>
+END;
+
+            if ($description) {
+                $html .= "<bdi>$description</bdi>&nbsp;";
+            }
+            $html .= <<<END
+<a href="$attachUrl"><bdi>$remoteFileName</bdi>$remoteFileExt</a>
 $size<br/>
 END;
         }
