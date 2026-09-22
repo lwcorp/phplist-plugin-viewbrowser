@@ -2,11 +2,11 @@
 
 namespace phpList\plugin\ViewBrowserPlugin;
 
-function displayPublicPage($page)
+function displayPublicPage($page, $title)
 {
     global $pagedata, $PoweredBy;
 
-    $title = htmlspecialchars(s('Campaign archive'));
+    $title = htmlspecialchars($title);
 
     echo <<<END
 <title>$title</title>
@@ -19,9 +19,11 @@ END;
 
 $container = include __DIR__ . '/dic.php';
 $archive = $container->get('ArchiveCreator');
+$translator = $container->get('FrontendTranslator');
+$title = $translator->s('Campaign archive');
 
 if (!empty($_GET['uid'])) {
-    displayPublicPage($archive->createSubscriberArchive($_GET['uid']));
+    displayPublicPage($archive->createSubscriberArchive($_GET['uid']), $title);
 
     return;
 }
@@ -29,8 +31,8 @@ if (!empty($_GET['uid'])) {
 if (isset($_GET['list']) && ctype_digit($_GET['list'])) {
     $result = getConfig('viewbrowser_anonymous')
         ? $archive->createListArchive($_GET['list'])
-        : s('Not allowed to view campaigns for list %d', $_GET['list']);
+        : $translator->s('Not allowed to view campaigns for list %d', $_GET['list']);
 } else {
-    $result = s('A user uid or a list id must be specified');
+    $result = $translator->s('A user uid or a list id must be specified');
 }
-displayPublicPage($result);
+displayPublicPage($result, $title);

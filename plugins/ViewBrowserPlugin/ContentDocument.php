@@ -128,6 +128,10 @@ class ContentDocument
     public function addTargetAttribute()
     {
         foreach ($this->dom->getElementsByTagName('a') as $element) {
+            if (substr($element->getAttribute('href'), 0, 1) == '#') {
+                continue;
+            }
+
             if ($element->getAttribute('target') == '') {
                 $element->setAttribute('target', '_blank');
             }
@@ -182,6 +186,7 @@ END;
         <xsl:copy>
             <xsl:apply-templates select="@*"/>
     <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>$title</title>
         $styles
     </head>
@@ -189,10 +194,16 @@ END;
         </xsl:copy>
     </xsl:template>
 
-    <!-- match head that does not have a title element -->
-    <xsl:template match="head[not(title)]">
+    <xsl:template match="head">
         <xsl:copy>
-        <title>$title</title>
+            <!-- match head that does not have a title element -->
+            <xsl:if test="not(title)">
+                <title>$title</title>
+            </xsl:if>
+            <!-- match head that does not have a meta viewport element -->
+            <xsl:if test="not(meta[@name='viewport'])">
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+            </xsl:if>
             <xsl:apply-templates select="node()"/>
         </xsl:copy>
     </xsl:template>

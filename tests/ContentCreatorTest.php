@@ -1,10 +1,35 @@
 <?php
+
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 class ContentCreatorTest extends TestCase
 {
+    private $users;
+    private $usersattributes;
+    private $attachments;
+    private $templates;
+    private $templateImages;
+    private $messages;
+    private $userMessage;
+    private $listForMessage;
+    private $forwardIds;
+    private $forwardUuids;
+    private $daoStub;
+    private $daoAttrStub;
+    private $translator;
+
     protected function setUp(): void
     {
+        global $plugins;
+
+        $this->translator = new \phpList\plugin\Common\FrontendTranslator(
+            ['language_file' => 'english.inc'],
+            $plugins['ViewBrowserPlugin']->coderoot
+        );
+
         $this->users = [
             '2f93856905d26f592c7cfefbff599a0e' => [
                 'id' => 51,
@@ -21,6 +46,14 @@ class ContentCreatorTest extends TestCase
         ];
 
         $this->attachments = [
+            26 => [
+                [
+                    'id' => 12,
+                    'description' => 'an attachment',
+                    'remotefile' => 'attachment.doc',
+                    'size' => 123456,
+                ],
+            ],
             28 => [
                 [
                     'id' => 12,
@@ -39,7 +72,8 @@ class ContentCreatorTest extends TestCase
 
         $this->templates = [
             0 => ['template' => ''],
-            1 => ['template' => '<html><head></head><body>template body[CONTENT]</body></html>']
+            1 => ['template' => '<html><head><title>existing title</title></head><body>template body[CONTENT]</body></html>'],
+            2 => ['template' => '<html><head><meta name="viewport" content="width=device-width" /></head><body>template body[CONTENT]</body></html>'],
         ];
 
         $this->templateImages = [
@@ -77,7 +111,7 @@ END
 </div>'
                 ,
                 'id' => 26,
-                'template' => 0,
+                'template' => 2,
                 'subject' => 'a test message',
                 'footer' => '',
                 'fromemail' => 'from@email.com',
@@ -300,106 +334,84 @@ Forward a Message to Someone [FORWARD]',
             ->getMock();
 
         $this->daoStub->method('messageById')
-            ->will(
-                $this->returnCallback(
-                    function ($messageId) {
-                        return $this->messages[$messageId] ?? false;
-                    }
-                )
+            ->willreturnCallback(
+                function ($messageId) {
+                    return $this->messages[$messageId] ?? false;
+                }
             );
         $this->daoStub->method('templateById')
-            ->will(
-                $this->returnCallback(
-                    function ($id) {
-                        return $this->templates[$id];
-                    }
-                )
+            ->willreturnCallback(
+                function ($id) {
+                    return $this->templates[$id];
+                }
             );
         $this->daoStub->method('userByUniqid')
-            ->will(
-                $this->returnCallback(
-                    function($uniqid) {
-                        return $this->users[$uniqid];
-                    }
-                )
+            ->willreturnCallback(
+                function($uniqid) {
+                    return $this->users[$uniqid];
+                }
             );
         $this->daoStub->method('forwardId')
-            ->will(
-                $this->returnCallback(
-                    function ($url) {
-                        return $this->forwardIds[$url];
-                    }
-                )
+            ->willreturnCallback(
+                function ($url) {
+                    return $this->forwardIds[$url];
+                }
             );
         $this->daoStub->method('forwardUuid')
-            ->will(
-                $this->returnCallback(
-                    function ($url) {
-                        return $this->forwardUuids[$url];
-                    }
-                )
+            ->willreturnCallback(
+                function ($url) {
+                    return $this->forwardUuids[$url] ?? false;
+                }
             );
         $this->daoStub->method('getUserAttributeValues')
-            ->will(
-                $this->returnCallback(
-                    function ($email) {
-                        return $this->usersattributes[$email];
-                    }
-                )
+            ->willreturnCallback(
+                function ($email) {
+                    return $this->usersattributes[$email];
+                }
             );
         $this->daoStub->method('loadMessageData')
-            ->will(
-                $this->returnCallback(
-                    function ($messageId) {
-                        return $this->messages[$messageId];
-                    }
-                )
+            ->willreturnCallback(
+                function ($messageId) {
+                    return $this->messages[$messageId];
+                }
             );
         $this->daoStub->method('fetchUrl')
              ->willReturn('here is the remote content');
         $this->daoStub->method('attachments')
-            ->will(
-                $this->returnCallback(
-                    function ($messageId) {
-                        return isset($this->attachments[$messageId])
-                            ? new ArrayIterator($this->attachments[$messageId])
-                            : [];
-                    }
-                )
+            ->willreturnCallback(
+                function ($messageId) {
+                    return isset($this->attachments[$messageId])
+                        ? new ArrayIterator($this->attachments[$messageId])
+                        : [];
+                }
             );
 
         $this->daoStub->method('templateImage')
-            ->will(
-                $this->returnCallback(
-                    function ($templateId, $filename) {
-                        $i = array_search("$templateId$filename", array_column($this->templateImages, 'templatefilename'));
+            ->willreturnCallback(
+                function ($templateId, $filename) {
+                    $i = array_search("$templateId$filename", array_column($this->templateImages, 'templatefilename'));
 
-                        if ($i === false) {
-                            $i = array_search("0$filename", array_column($this->templateImages, 'templatefilename'));
-                        }
-
-                        return ($i !== false) ? $this->templateImages[$i] : false;
+                    if ($i === false) {
+                        $i = array_search("0$filename", array_column($this->templateImages, 'templatefilename'));
                     }
-                )
+
+                    return ($i !== false) ? $this->templateImages[$i] : false;
+                }
             );
 
         $this->daoStub->method('wasUserSentMessage')
-            ->will(
-                $this->returnCallback(
-                    function ($messageId, $uid) {
-                        return in_array($messageId, $this->userMessage[$uid]);
-                    }
-                )
+            ->willreturnCallback(
+                function ($messageId, $uid) {
+                    return in_array($messageId, $this->userMessage[$uid]);
+                }
             );
 
         $this->daoStub->method('listsForMessage')
-            ->will(
-                $this->returnCallback(
-                    function ($messageId) {
-                        $a = $this->listForMessage[$messageId] ?? $this->listForMessage[25];
-                        return new ArrayIterator($a);
-                    }
-                )
+            ->willreturnCallback(
+                function ($messageId) {
+                    $a = $this->listForMessage[$messageId] ?? $this->listForMessage[25];
+                    return new ArrayIterator($a);
+                }
             );
         $this->daoAttrStub = $this->getMockBuilder('phpList\plugin\Common\DAO\Attribute')
             ->disableOriginalConstructor()
@@ -412,13 +424,13 @@ Forward a Message to Someone [FORWARD]',
             ]);
     }
 
-    public function createsEmailContentDataProvider()
+    public static function createsEmailContentDataProvider()
     {
         $data = [
-            'title element contains message subject' => [
+            'head element added containing meta and title elements' => [
                 25,
                 '2f93856905d26f592c7cfefbff599a0e',
-                ['<title>a test message</title>']
+                ['<head>', 'meta name="viewport"', '<title>a test message</title>']
             ],
             'replaces email placeholder' => [
                 25,
@@ -450,6 +462,11 @@ Forward a Message to Someone [FORWARD]',
                 '',
                 ['email address is  name is default name uniqid is  userid is  more']
             ],
+            'adds title element, does not add meta element to existing head element' => [
+                26,
+                '2f93856905d26f592c7cfefbff599a0e',
+                ['<head>', 'meta name="viewport" content="width=device-width"', '<title>a test message</title>'],
+            ],
             'does not convert a link whose text contains http' => [
                 26,
                 '2f93856905d26f592c7cfefbff599a0e',
@@ -469,6 +486,12 @@ Forward a Message to Someone [FORWARD]',
                 27,
                 '2f93856905d26f592c7cfefbff599a0e',
                 ['<a href="http://www.phplist.com">', 'template body'],
+            ],
+            'adds meta element, does not add title to head element' => [
+                27,
+                '2f93856905d26f592c7cfefbff599a0e',
+                ['<meta name="viewport" content="width=device-width, initial-scale=1"', '<title>a test message</title>'],
+                ['<title>existing title</title>'],
             ],
             'replaces viewbrowser placeholder' => [
                 29,
@@ -503,18 +526,15 @@ Forward a Message to Someone [FORWARD]',
         return $data;
     }
 
-    /**
-     * @test
-     * @dataProvider createsEmailContentDataProvider
-     */
-    public function createsEmailContent($messageId, $uniqid, $expected, $unexpected = array())
+    #[DataProvider('createsEmailContentDataProvider')]
+    public function testCreatesEmailContent($messageId, $uniqid, $expected, $unexpected = array())
     {
         global $phplist_config;
 
         $phplist_config['viewbrowser_anonymous'] = false;
         $phplist_config['viewbrowser_allowed_lists'] = '';
         $phplist_config['viewbrowser_target'] = false;
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, true);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, true);
         $result = $cc->createContent($messageId, $uniqid);
 
         foreach ($expected as $e) {
@@ -526,7 +546,7 @@ Forward a Message to Someone [FORWARD]',
         }
     }
 
-    public function replacesContactPlaceholdersDataProvider()
+    public static function replacesContactPlaceholdersDataProvider()
     {
         $data = [
             'replaces CONTACT placeholder' => [
@@ -546,13 +566,10 @@ Forward a Message to Someone [FORWARD]',
         return $data;
     }
 
-    /**
-     * @test
-     * @dataProvider replacesContactPlaceholdersDataProvider
-     */
-    public function replacesContactPlaceholders($messageId, $uniqid, $expected, $unexpected = array())
+    #[DataProvider('replacesContactPlaceholdersDataProvider')]
+    public function testReplacesContactPlaceholders($messageId, $uniqid, $expected, $unexpected = array())
     {
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, false);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent($messageId, $uniqid);
 
         foreach ($expected as $e) {
@@ -564,7 +581,7 @@ Forward a Message to Someone [FORWARD]',
         }
     }
 
-    public function encodesLinksCurrentDataProvider()
+    public static function encodesLinksCurrentDataProvider()
     {
         $data = [
             'converts a link when link tracking is enabled' => [
@@ -577,13 +594,11 @@ Forward a Message to Someone [FORWARD]',
 
         return $data;
     }
-    /**
-     * @test
-     * @dataProvider encodesLinksCurrentDataProvider
-     */
-    public function encodesLinksCurrent($messageId, $uniqid, $expected, $unexpected = array())
+
+    #[DataProvider('encodesLinksCurrentDataProvider')]
+    public function testEncodesLinksCurrent($messageId, $uniqid, $expected, $unexpected = array())
     {
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, true);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, true);
         $result = $cc->createContent($messageId, $uniqid);
 
         foreach ($expected as $e) {
@@ -595,7 +610,7 @@ Forward a Message to Someone [FORWARD]',
         }
     }
 
-    public function doesNotEncodeLinksDataProvider()
+    public static function doesNotEncodeLinksDataProvider()
     {
         $data = [
             'does not convert a link when link tracking is disabled' => [
@@ -607,13 +622,11 @@ Forward a Message to Someone [FORWARD]',
 
         return $data;
     }
-    /**
-     * @test
-     * @dataProvider doesNotEncodeLinksDataProvider
-     */
-    public function doesNotEncodeLinks($messageId, $uniqid, $expected, $unexpected = array())
+
+    #[DataProvider('doesNotEncodeLinksDataProvider')]
+    public function testDoesNotEncodeLinks($messageId, $uniqid, $expected, $unexpected = array())
     {
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, false);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent($messageId, $uniqid);
 
         foreach ($expected as $e) {
@@ -624,53 +637,63 @@ Forward a Message to Someone [FORWARD]',
             $this->assertStringNotContainsString($e, $result);
         }
     }
-    /**
-     * @test
-     */
-    public function createsHtmlFormatFooter()
+
+    public function testCreatesHtmlFormatFooter()
     {
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, false);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent(34, '2f93856905d26f592c7cfefbff599a0e');
         $expected = '<div class="footer" style="text-align:left; font-size: 75%;">';
         $this->assertStringContainsString($expected, $result);
         $expected2 = '<a href="http://mysite.com/lists/?p=preferences&amp;uid=2f93856905d26f592c7cfefbff599a0e">preferences page</a>';
         $this->assertStringContainsString($expected2, $result);
     }
-    /**
-     * @test
-     */
-    public function addsAttachment()
+
+    public function testAddsAttachmentForUser()
     {
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, false);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent(28, '2f93856905d26f592c7cfefbff599a0e');
-        $expected =
-'<p>Attachments:<br><img src="./?p=image&amp;pi=CommonPlugin&amp;image=attach.png" alt="" title="">
-an attachment
-<a href="./dl.php?id=12&amp;uid=2f93856905d26f592c7cfefbff599a0e">attachment.doc</a>
-123.5kB<br><img src="./?p=image&amp;pi=CommonPlugin&amp;image=attach.png" alt="" title="">
-another attachment
-<a href="./dl.php?id=13&amp;uid=2f93856905d26f592c7cfefbff599a0e">attachment2.doc</a>
-7.7kB<br></p>';
-        $this->assertStringContainsString($expected, $result);
+        $expected1 =
+'<p>Attachments:<br>';
+        $expected2 =
+'<img src="./?p=image&amp;pi=CommonPlugin&amp;image=attach.png" alt="" title="">';
+        $expected3 =
+'<bdi>an attachment</bdi>';
+        $expected4 =
+'<a href="http://mysite.com/lists/?p=dl&amp;pi=ViewBrowserPlugin&amp;attach=12&amp;uid=2f93856905d26f592c7cfefbff599a0e"><bdi>attachment</bdi>.doc</a>
+123.5kB<br>';
+        $this->assertStringContainsString($expected1, $result);
+        $this->assertStringContainsString($expected2, $result);
+        $this->assertStringContainsString($expected3, $result);
+        $this->assertStringContainsString($expected4, $result);
     }
 
-    /**
-     * @test
-     */
-    public function notAddAttachmentForAnonymous()
+    public function testAddsAttachmentForAnonymous()
+    {
+        global $phplist_config;
+
+        $phplist_config['viewbrowser_anonymous'] = true;
+        $phplist_config['viewbrowser_anonymous_attachments'] = true;
+        $phplist_config['viewbrowser_target'] = false;
+
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
+        $result = $cc->createContent(26, '');
+        $this->assertStringContainsString('Attachments', $result);
+    }
+
+    public function testNotAddAttachmentForAnonymous()
     {
         global $phplist_config;
 
         $phplist_config['viewbrowser_anonymous'] = true;
         $phplist_config['viewbrowser_target'] = false;
 
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, false);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent(25, '');
         $this->assertStringContainsString('here is the message content', $result);
-        $this->assertStringNotContainsString('dl.php', $result);
+        $this->assertStringNotContainsString('attach', $result);
     }
 
-    public function allowAccessDataProvider()
+    public static function allowAccessDataProvider()
     {
         $data = [
             'allowAnonymousToPublicList' => [
@@ -741,47 +764,38 @@ another attachment
         return $data;
     }
 
-    /**
-     * @test
-     * @dataProvider allowAccessDataProvider
-     */
-    public function allowAnonymousAndUserAccess($anonymous, $allowed, $mid, $uid, $expected)
+    #[DataProvider('allowAccessDataProvider')]
+    public function testAllowAnonymousAndUserAccess($anonymous, $allowed, $mid, $uid, $expected)
     {
         global $phplist_config;
 
         $phplist_config['viewbrowser_anonymous'] = $anonymous;
         $phplist_config['viewbrowser_allowed_lists'] = $allowed;
 
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, false, getConfig('version'));
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, false);
         $result = $cc->createContent($mid, $uid);
         $this->assertStringContainsString($expected, $result);
     }
 
-    /**
-     * @test
-     */
-    public function addsTarget()
+    public function testAddsTarget()
     {
         global $phplist_config;
 
         $phplist_config['viewbrowser_target'] = true;
 
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, true);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, true);
         $result = $cc->createContent(26, '2f93856905d26f592c7cfefbff599a0e');
         $this->assertStringContainsString('target="_blank"', $result);
 
     }
 
-    /**
-     * @test
-     */
-    public function doesNotAddTarget()
+    public function testDoesNotAddTarget()
     {
         global $phplist_config;
 
         $phplist_config['viewbrowser_target'] = false;
 
-        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, true);
+        $cc = new phpList\plugin\ViewBrowserPlugin\ContentCreator($this->daoStub, $this->daoAttrStub, $this->translator, true);
         $result = $cc->createContent(26, '2f93856905d26f592c7cfefbff599a0e');
         $this->assertStringNotContainsString('target="_blank"', $result);
 

@@ -38,6 +38,8 @@ class ContentCreator
     private $daoAttr;
     /** @var bool Whether click tracking is enabled */
     private $clickTrack;
+    /** @var Common\FrontendTranslator */
+    private $translator;
 
     /**
      * For an anonymous page determine whether a message has been sent to an allowed list.
@@ -94,16 +96,33 @@ class ContentCreator
      */
     private function addAttachments($uid, Iterator $attachments)
     {
-        $html = '<p>Attachments:<br/>';
+        $html = sprintf('<p>%s:<br/>', $this->translator->s('Attachments'));
 
         foreach ($attachments as $a) {
             $description = htmlspecialchars($a['description']);
-            $remotefile = htmlspecialchars($a['remotefile']);
+            $remoteFileInfo = pathinfo($a['remotefile']);
+            $remoteFileName = isset($remoteFileInfo['filename'])
+                ? htmlspecialchars($remoteFileInfo['filename'])
+                : '';
+            $remoteFileExt = isset($remoteFileInfo['extension'])
+                ? '.' . $remoteFileInfo['extension']
+                : '';
             $size = $this->human_filesize($a['size']);
+            $params = ['p' => \ViewBrowserPlugin::DOWNLOAD_PAGE, 'pi' => 'ViewBrowserPlugin', 'attach' => $a['id']];
+
+            if ($uid) {
+                $params['uid'] = $uid;
+            }
+            $attachUrl = htmlspecialchars(publicUrl($params));
             $html .= <<<END
 <img src="./?p=image&amp;pi=CommonPlugin&amp;image=attach.png" alt="" title="" />
-$description
-<a href="./dl.php?id={$a['id']}&amp;uid=$uid">$remotefile</a>
+END;
+
+            if ($description) {
+                $html .= "<bdi>$description</bdi>&nbsp;";
+            }
+            $html .= <<<END
+<a href="$attachUrl"><bdi>$remoteFileName</bdi>$remoteFileExt</a>
 $size<br/>
 END;
         }
@@ -277,10 +296,12 @@ END;
     public function __construct(
         DAO $dao,
         Common\DAO\Attribute $daoAttr,
+        $translator,
         $clickTrack
     ) {
         $this->dao = $dao;
         $this->daoAttr = $daoAttr;
+        $this->translator = $translator;
         $this->clickTrack = $clickTrack;
     }
 
@@ -299,7 +320,7 @@ END;
         $row = $this->dao->messageById($mid);
 
         if (!$row) {
-            return s('Message with id %d does not exist', $mid);
+            return $this->translator->s('Message with id %d does not exist', $mid);
         }
         $personalise = ($uid !== '');
 
@@ -307,19 +328,19 @@ END;
             $user = $this->dao->userByUniqid($uid);
 
             if (!$user) {
-                return s('User with uid %s does not exist', $uid);
+                return $this->translator->s('User with uid %s does not exist', $uid);
             }
             $allow = $this->dao->wasUserSentMessage($mid, $uid)
                 || (getConfig('viewbrowser_anonymous') && $this->sentToAllowedList($mid))
                 || $this->dao->isUserSuperAdmin($uid);
 
             if (!$allow) {
-                return s('Not allowed to view message %d', $mid);
+                return $this->translator->s('Not allowed to view message %d', $mid);
             }
             $attributeValues = $this->dao->getUserAttributeValues($user['email']);
         } else {
             if (!$this->sentToAllowedList($mid)) {
-                return s('Not allowed to view message %d', $mid);
+                return $this->translator->s('Not allowed to view message %d', $mid);
             }
             $user = array('email' => '', 'uniqid' => '');
             $attributeValues = array();
@@ -338,7 +359,7 @@ END;
             $content = $this->dao->fetchUrl($message['sendurl'], $user);
 
             if (!$content) {
-                return s('Unable to retrieve URL %s', $message['sendurl']);
+                return $this->translator->s('Unable to retrieve URL %s', $message['sendurl']);
             }
         } else {
             $templateBody = '';
@@ -376,8 +397,7 @@ END;
         $content = parseLogoPlaceholders($content);
         $content = $this->replaceUserTrack($content, $mid, $uid);
 
-        // phplist restricts download of attachments to subscribers only
-        if ($personalise && count($attachments = $this->dao->attachments($mid)) > 0) {
+        if (($personalise || getConfig('viewbrowser_anonymous_attachments')) && count($attachments = $this->dao->attachments($mid)) > 0) {
             $content = addHTMLFooter($content, $this->addAttachments($uid, $attachments));
         }
         $destinationEmail = $user['email'];

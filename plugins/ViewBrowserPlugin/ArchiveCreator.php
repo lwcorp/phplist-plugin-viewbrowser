@@ -37,6 +37,8 @@ class ArchiveCreator
 {
     /** @var phpList\plugin\ViewBrowserPlugin\DAO DAO */
     private $dao;
+    /** @var Common\FrontendTranslator */
+    private $translator;
 
     private function urlPattern()
     {
@@ -63,14 +65,15 @@ class ArchiveCreator
                 $params['uid'] = $uid;
             }
             $url = publicUrl($params);
-            $link = new PageLink($url, $c['subject'], ['target' => '_blank']);
+            $attributes = getConfig('viewbrowser_target') ? ['target' => '_blank'] : [];
+            $link = new PageLink($url, $c['subject'], $attributes);
 
             yield [
                 'id' => $c['messageid'],
                 'subject' => $c['subject'],
                 'url' => $url,
                 'link' => $link,
-                'entered' => formatDate($c['entered']),
+                'entered' => $c['entered'],
             ];
         }
     }
@@ -90,15 +93,41 @@ class ArchiveCreator
         $customCssUrl = getConfig('viewbrowser_archive_custom_css_url');
         $cssUrl = $customCssUrl ?: \ViewBrowserPlugin::CSS_URL;
 
+        $enteredDateFormatter = function ($archiveItems) {
+            $useIntl = extension_loaded('intl');
+            $intlFormat = $this->translator->convertFormat(getConfig('date_format'));
+
+            foreach ($archiveItems as $item) {
+                if ($useIntl) {
+                    $item['entered'] = \IntlDateFormatter::formatObject(
+                        new \DateTime($item['entered']),
+                        $intlFormat,
+                        $this->translator->languageCode()
+                    );
+                } else {
+                    $item['entered'] = formatDate($item['entered']);
+                }
+
+                yield $item;
+            }
+        };
+
         return (string) new View(
             __DIR__ . '/archive.tpl.php',
-            ['items' => $this->archiveItems($uid, $campaigns), 'subject' => $subject, 'paginator' => $paginator, 'css' => $cssUrl]
+            [
+                'items' => $enteredDateFormatter($this->archiveItems($uid, $campaigns)),
+                'subject' => $subject,
+                'paginator' => $paginator,
+                'css' => $cssUrl,
+                'translator' => $this->translator
+            ]
         );
     }
 
-    public function __construct(DAO $dao)
+    public function __construct(DAO $dao, $translator)
     {
         $this->dao = $dao;
+        $this->translator = $translator;
     }
 
     /**
@@ -111,6 +140,10 @@ class ArchiveCreator
     public function createSubscriberArchive($uid)
     {
         $user = $this->dao->userByUniqid($uid);
+
+        if (!$user) {
+            return $this->translator->s('User with uid %s does not exist', $uid);
+        }
 
         $totalCallback = function () use ($uid) {
             return $this->dao->totalMessagesForUser($uid);
@@ -135,7 +168,7 @@ class ArchiveCreator
         $list = $this->dao->listById($listId);
 
         if (!$list) {
-            return s('List %d does not exist', $listId);
+            return $this->translator->s('List %d does not exist', $listId);
         }
         $allowedLists = getConfig('viewbrowser_allowed_lists');
         $allowed =
@@ -143,7 +176,7 @@ class ArchiveCreator
             || in_array($listId, preg_split('/\s+/', $allowedLists, -1, PREG_SPLIT_NO_EMPTY));
 
         if (!$allowed) {
-            return s('Not allowed to view campaigns for list %d', $listId);
+            return $this->translator->s('Not allowed to view campaigns for list %d', $listId);
         }
 
         $totalCallback = function () use ($listId) {
@@ -167,8 +200,8 @@ class ArchiveCreator
     {
         $user = $this->dao->subscriberForAdmin($adminId);
 
-        if ($user['email'] === null) {
-            return s('Admin email %s is not a subscriber', $user['admin_email']);
+        if ($user === false || $user === null) {
+            return s('No campaigns found');
         }
         $uid = $user['uniqid'];
         $title = s('Campaigns sent to %s', $user['email']);
@@ -177,11 +210,20 @@ class ArchiveCreator
             $w->title = $title;
             $w->elementHeading = s('ID');
 
-            foreach ($this->archiveItems($uid, $campaigns) as $row) {
+            $enteredDateFormatter = function ($archiveItems) {
+                foreach ($archiveItems as $item) {
+                    $item['entered'] = formatDate($item['entered']);
+
+                    yield $item;
+                }
+            };
+
+            foreach ($enteredDateFormatter($this->archiveItems($uid, $campaigns)) as $row) {
                 $key = $row['id'];
                 $w->addElement($key);
                 $w->addColumn($key, s('Sent'), $row['entered']);
-                $w->addColumn($key, s('Campaign'), $row['subject'], $row['url'], '', ['target' => '_blank']);
+                $attributes = getConfig('viewbrowser_target') ? ['target' => '_blank'] : [];
+                $w->addColumn($key, s('Campaign'), $row['subject'], $row['url'], '', $attributes);
             }
         };
         $totalCallback = function () use ($uid) {

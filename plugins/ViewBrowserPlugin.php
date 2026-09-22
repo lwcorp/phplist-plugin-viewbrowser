@@ -32,6 +32,7 @@ class ViewBrowserPlugin extends phplistPlugin
     const VIEW_PAGE = 'view';
     const IMAGE_PAGE = 'image';
     const ARCHIVE_PAGE = 'archive';
+    const DOWNLOAD_PAGE = 'dl';
     const CSS_PAGE = 'archivecss';
     const CSS_URL = './?pi=ViewBrowserPlugin&p=archivecss';
     const ADMIN_ARCHIVE_PAGE = 'adminarchive';
@@ -54,7 +55,7 @@ class ViewBrowserPlugin extends phplistPlugin
     public $topMenuLinks = array(
         self::ADMIN_ARCHIVE_PAGE => array('category' => 'campaigns'),
     );
-    public $publicPages = array(self::VIEW_PAGE, self::IMAGE_PAGE, self::ARCHIVE_PAGE, self::CSS_PAGE);
+    public $publicPages = array(self::VIEW_PAGE, self::IMAGE_PAGE, self::ARCHIVE_PAGE, self::CSS_PAGE, self::DOWNLOAD_PAGE);
 
     /**
      * Create a url to the archive page.
@@ -165,9 +166,9 @@ class ViewBrowserPlugin extends phplistPlugin
         return array(
             'phpList version 3.3.0 or later' => version_compare(VERSION, '3.3') >= 0,
             'XSL extension installed' => extension_loaded('xsl'),
-            'Common Plugin v3.29.1 or later enabled' => (
+            'Common Plugin v3.35.6 or later enabled' => (
                 phpListPlugin::isEnabled('CommonPlugin')
-                && version_compare($plugins['CommonPlugin']->version, '3.29.1') >= 0
+                && version_compare($plugins['CommonPlugin']->version, '3.35.6') >= 0
             ),
             'PHP version 7 or greater' => version_compare(PHP_VERSION, '7') > 0,
         );
@@ -207,12 +208,26 @@ class ViewBrowserPlugin extends phplistPlugin
                 'value' => false,
                 'description' => s('Whether the plugin should provide an anonymous page'),
                 'type' => 'boolean',
-                'allowempty' => false,
+                'allowempty' => true,
                 'category' => 'View in Browser',
             ),
             'viewbrowser_allowed_lists' => array(
                 'value' => '',
                 'description' => s('Restrict the anonymous page and archive to these list IDs. Leave empty to allow all public lists.'),
+                'type' => 'text',
+                'allowempty' => true,
+                'category' => 'View in Browser',
+            ),
+            'viewbrowser_anonymous_attachments' => array(
+                'value' => false,
+                'description' => s('Allow attachments on an anonymous page'),
+                'type' => 'boolean',
+                'allowempty' => true,
+                'category' => 'View in Browser',
+            ),
+            'viewbrowser_inline_attachments' => array(
+                'value' => 'application/pdf',
+                'description' => s('List of attachment mime types to open inline (separate by comma)'),
                 'type' => 'text',
                 'allowempty' => true,
                 'category' => 'View in Browser',

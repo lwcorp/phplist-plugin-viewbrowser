@@ -5,7 +5,7 @@ require __DIR__ . '/phplist.php';
 
 define('PHPLISTINIT', 1);
 define("PLUGIN_ROOTDIR", 'plugins');
-define("PLUGIN_ROOTDIRS", "");
+define("PLUGIN_ROOTDIRS", __DIR__ . '/../../phplist-plugin-common/plugins');
 define('EMAILTEXTCREDITS', true);
 define('ALWAYS_ADD_USERTRACK', true);
 define('CLICKTRACK', true);
@@ -30,12 +30,14 @@ $GLOBALS['strContactMessage'] = 'Add us to your address book';
 
 $_GET['pi'] = 'ViewBrowserPlugin';
 
+require 'CommonPlugin.php';
 require 'ViewBrowserPlugin.php';
 $pi = new ViewBrowserPlugin();
+$common = new CommonPlugin();
 $GLOBALS['plugins'] = [
+    'CommonPlugin' => $common,
     'ViewBrowserPlugin' => $pi,
 ];
-require 'CommonPlugin/Autoloader.php';
-
+$common->activate();
 $pi->activate();
 

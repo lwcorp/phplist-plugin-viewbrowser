@@ -1,4 +1,6 @@
 <?php
+
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class ViewBrowserPluginTest extends TestCase
@@ -12,7 +14,7 @@ class ViewBrowserPluginTest extends TestCase
         $this->pi = $plugins['ViewBrowserPlugin'];
     }
 
-    public function parseHtmlDataProvider()
+    public static function parseHtmlDataProvider()
     {
         return [
             'lower case placeholder' => [
@@ -49,11 +51,8 @@ class ViewBrowserPluginTest extends TestCase
             ],
         ];
     }
-    /**
-     * @test
-     * @dataProvider parseHtmlDataProvider
-     */
-    public function parseOutgoingHTMLMessage($mid, $content, $email, $user, $expected)
+    #[DataProvider('parseHtmlDataProvider')]
+    public function testParseOutgoingHTMLMessage($mid, $content, $email, $user, $expected)
     {
         global $phplist_config;
 
@@ -65,7 +64,7 @@ class ViewBrowserPluginTest extends TestCase
         );
     }
 
-    public function parseTextDataProvider()
+    public static function parseTextDataProvider()
     {
         return [
             'lower case placeholder' => [
@@ -98,11 +97,8 @@ class ViewBrowserPluginTest extends TestCase
             ],
         ];
     }
-    /**
-     * @test
-     * @dataProvider parseTextDataProvider
-     */
-    public function parseOutgoingTextMessage($mid, $content, $email, $user, $expected)
+    #[DataProvider('parseTextDataProvider')]
+    public function testParseOutgoingTextMessage($mid, $content, $email, $user, $expected)
     {
         $this->assertEquals(
             $expected,
@@ -110,7 +106,7 @@ class ViewBrowserPluginTest extends TestCase
         );
     }
 
-    public function parseHtmlAnonymousDataProvider()
+    public static function parseHtmlAnonymousDataProvider()
     {
         return [
             'url placeholder when anonymous page enabled' => [
@@ -127,11 +123,9 @@ class ViewBrowserPluginTest extends TestCase
             ],
         ];
     }
-    /**
-     * @test
-     * @dataProvider parseHtmlAnonymousDataProvider
-     */
-    public function parseOutgoingHTMLMessageAnonymous($mid, $content, $email, $user, $expected)
+
+    #[DataProvider('parseHtmlAnonymousDataProvider')]
+    public function testParseOutgoingHTMLMessageAnonymous($mid, $content, $email, $user, $expected)
     {
         global $phplist_config;
 

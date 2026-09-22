@@ -1,11 +1,28 @@
 <?php
 
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 class ArchiveCreatorTest extends TestCase
 {
+    private $users;
+    private $usermessage;
+    private $listmessage;
+    private $lists;
+    private $daoStub;
+    private $translator;
+
     protected function setUp(): void
     {
+        global $plugins;
+
+        $this->translator = new \phpList\plugin\Common\FrontendTranslator(
+            ['language_file' => 'english.inc'],
+            $plugins['ViewBrowserPlugin']->coderoot
+        );
+
         $this->users = [
             '2f93856905d26f592c7cfefbff599a0e' => [
                 'id' => 51,
@@ -62,57 +79,45 @@ class ArchiveCreatorTest extends TestCase
             ->getMock();
 
         $this->daoStub->method('userByUniqid')
-            ->will(
-                $this->returnCallback(
-                    function ($uniqid) {
-                        return $this->users[$uniqid];
-                    }
-                )
+            ->willreturnCallback(
+                function ($uniqid) {
+                    return $this->users[$uniqid];
+                }
             );
 
         $this->daoStub->method('messagesForUser')
-            ->will(
-                $this->returnCallback(
-                    function ($uniqid) {
-                        return $this->usermessage[$uniqid];
-                    }
-                )
+            ->willreturnCallback(
+                function ($uniqid) {
+                    return $this->usermessage[$uniqid];
+                }
             );
         $this->daoStub->method('totalMessagesForUser')
-            ->will(
-                $this->returnCallback(
-                    function ($uniqid) {
-                        return count($this->usermessage[$uniqid]);
-                    }
-                )
+            ->willreturnCallback(
+                function ($uniqid) {
+                    return count($this->usermessage[$uniqid]);
+                }
             );
         $this->daoStub->method('messagesForList')
-            ->will(
-                $this->returnCallback(
-                    function ($listId) {
-                        return $this->listmessage[$listId];
-                    }
-                )
+            ->willreturnCallback(
+                function ($listId) {
+                    return $this->listmessage[$listId];
+                }
             );
         $this->daoStub->method('totalMessagesForList')
-            ->will(
-                $this->returnCallback(
-                    function ($listId) {
-                        return count($this->listmessage[$listId]);
-                    }
-                )
+            ->willreturnCallback(
+                function ($listId) {
+                    return count($this->listmessage[$listId]);
+                }
             );
         $this->daoStub->method('listById')
-            ->will(
-                $this->returnCallback(
-                    function ($listId) {
-                        return $this->lists[$listId];
-                    }
-                )
+            ->willreturnCallback(
+                function ($listId) {
+                    return $this->lists[$listId];
+                }
             );
     }
 
-    public function createsArchiveDataProvider()
+    public static function createsArchiveDataProvider()
     {
         $data = [
             'contains all messages' => [
@@ -121,7 +126,7 @@ class ArchiveCreatorTest extends TestCase
             ],
             'contains date' => [
                 '2f93856905d26f592c7cfefbff599a0e',
-                ['2017-10-02']
+                ['1 Oct 2017']
             ],
             'contains view in browser url' => [
                 '2f93856905d26f592c7cfefbff599a0e',
@@ -135,13 +140,10 @@ class ArchiveCreatorTest extends TestCase
         return $data;
     }
 
-    /**
-     * @test
-     * @dataProvider createsArchiveDataProvider
-     */
-    public function createsArchive($uniqid, $expected, $unexpected = array())
+    #[DataProvider('createsArchiveDataProvider')]
+    public function testCreatesArchive($uniqid, $expected, $unexpected = array())
     {
-        $archive = new phpList\plugin\ViewBrowserPlugin\ArchiveCreator($this->daoStub);
+        $archive = new phpList\plugin\ViewBrowserPlugin\ArchiveCreator($this->daoStub, $this->translator);
         $result = $archive->createSubscriberArchive($uniqid);
 
         foreach ($expected as $e) {
@@ -153,7 +155,7 @@ class ArchiveCreatorTest extends TestCase
         }
     }
 
-    public function allowAccessDataProvider()
+    public static function allowAccessDataProvider()
     {
         $data = [
             'createsArchivePublicList' => [
@@ -176,20 +178,35 @@ class ArchiveCreatorTest extends TestCase
         return $data;
     }
 
-    /**
-     * @test
-     * @dataProvider allowAccessDataProvider
-     */
-    public function allowAccessToArchive($allowed, $listId, $expected)
+    #[DataProvider('allowAccessDataProvider')]
+    public function testAllowAccessToArchive($allowed, $listId, $expected)
     {
         global $phplist_config;
 
         $phplist_config['viewbrowser_anonymous'] = true;
         $phplist_config['viewbrowser_allowed_lists'] = $allowed;
 
-        $archive = new phpList\plugin\ViewBrowserPlugin\ArchiveCreator($this->daoStub);
+        $archive = new phpList\plugin\ViewBrowserPlugin\ArchiveCreator($this->daoStub, $this->translator);
         $result = $archive->createListArchive($listId);
 
         $this->assertStringContainsString($expected, $result);
+    }
+
+    public function testDateIsTranslated()
+    {
+        global $phplist_config, $plugins;
+
+        $phplist_config['viewbrowser_anonymous'] = true;
+        $phplist_config['viewbrowser_allowed_lists'] = '';
+        $phplist_config['date_format'] = 'j M Y';
+        $translator = new \phpList\plugin\Common\FrontendTranslator(
+            ['language_file' => 'german.inc'],
+            $plugins['ViewBrowserPlugin']->coderoot
+        );
+
+        $archive = new phpList\plugin\ViewBrowserPlugin\ArchiveCreator($this->daoStub, $translator);
+        $result = $archive->createListArchive(1);
+
+        $this->assertStringContainsString('1 Okt. 2017', $result);
     }
 }
